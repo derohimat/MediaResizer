@@ -1,10 +1,14 @@
 package pyxis.uzuki.live.mediaresizersample.activity;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.Nullable;
+import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.File;
@@ -17,7 +21,7 @@ import pyxis.uzuki.live.mediaresizer.data.VideoResizeOption;
 import pyxis.uzuki.live.mediaresizer.model.ImageMode;
 import pyxis.uzuki.live.mediaresizer.model.MediaType;
 import pyxis.uzuki.live.mediaresizer.model.ScanRequest;
-import pyxis.uzuki.live.mediaresizer.model.VideoResolutionType;
+import pyxis.uzuki.live.mediaresizer.model.VideoCompressQuality;
 import pyxis.uzuki.live.mediaresizersample.R;
 import pyxis.uzuki.live.mediaresizersample.utils.ResultBuilder;
 import pyxis.uzuki.live.pyxinjector.annotation.BindView;
@@ -36,6 +40,8 @@ import pyxis.uzuki.live.richutilskt.utils.RichUtils;
 
 public class JavaActivity extends InjectActivity {
     private @BindView TextView txtStatus;
+    private @BindView LinearLayout lyVideo;
+    private String originVideoPath, resultVideoPath;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -71,6 +77,24 @@ public class JavaActivity extends InjectActivity {
         });
     }
 
+    @OnClick(R.id.btnPlayOrigin)
+    private void clickPlayOrigin() {
+        if (originVideoPath != null) {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(originVideoPath));
+            intent.setDataAndType(Uri.parse(originVideoPath), "video/mp4");
+            startActivity(intent);
+        }
+    }
+
+    @OnClick(R.id.btnPlayResult)
+    private void clickPlayResult() {
+        if (resultVideoPath != null) {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(resultVideoPath));
+            intent.setDataAndType(Uri.parse(resultVideoPath), "video/mp4");
+            startActivity(intent);
+        }
+    }
+
     private void resultProcess(int code, String path, MediaType type) {
         if (code == RPickMedia.PICK_FAILED)
             return;
@@ -86,7 +110,7 @@ public class JavaActivity extends InjectActivity {
         File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/MediaResizer/");
         file.mkdirs();
 
-        File imageFile = new File(file, RichUtils.asDateString(System.currentTimeMillis(), "yyyy-MM-dd HH:mm:ss") + ".jpg");
+        File imageFile = new File(file, RichUtils.asDateString(System.currentTimeMillis(), "yyyy-MM-dd-HH:mm:ss") + ".jpg");
         DialogInterface progress = RichUtils.progress(this, "Encoding...");
 
         ImageResizeOption resizeOption = new ImageResizeOption.Builder()
@@ -112,39 +136,37 @@ public class JavaActivity extends InjectActivity {
     }
 
     private void selectVideoStrategy(String path) {
-        String[] arrays = new String[]{"480P", "720P", "960x540 (not supported in devices)"};
+        String[] arrays = new String[]{"Low", "Medium", "High"};
         RichUtils.selector(this, Arrays.asList(arrays), (dialog, item, position) -> {
-            VideoResolutionType type;
+            VideoCompressQuality quality;
             switch (position) {
                 case 0:
-                    type = VideoResolutionType.AS480;
+                    quality = VideoCompressQuality.LOW;
                     break;
                 default:
                 case 1:
-                    type = VideoResolutionType.AS720;
+                    quality = VideoCompressQuality.MEDIUM;
                     break;
                 case 2:
-                    type = VideoResolutionType.AS960;
+                    quality = VideoCompressQuality.HIGH;
                     break;
             }
 
-            processVideo(path, type);
+            processVideo(path, quality);
             dialog.dismiss();
         });
     }
 
-    private void processVideo(String path, VideoResolutionType type) {
+    private void processVideo(String path, VideoCompressQuality quality) {
+        originVideoPath = path;
         File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES) + "/MediaResizer/");
         file.mkdirs();
 
-        File imageFile = new File(file, RichUtils.asDateString(System.currentTimeMillis(), "yyyy-MM-dd HH:mm:ss") + ".mp4");
+        File imageFile = new File(file, RichUtils.asDateString(System.currentTimeMillis(), "yyyyMMdd_HHmmss") + ".mp4");
         DialogInterface progress = RichUtils.progress(this, "Encoding...");
 
         VideoResizeOption resizeOption = new VideoResizeOption.Builder()
-                .setVideoResolutionType(type)
-                .setVideoBitrate(1000 * 1000)
-                .setAudioBitrate(128 * 1000)
-                .setAudioChannel(1)
+                .setQuality(path, quality)
                 .setScanRequest(ScanRequest.TRUE)
                 .build();
 
@@ -154,6 +176,8 @@ public class JavaActivity extends InjectActivity {
                 .setTargetPath(path)
                 .setOutputPath(imageFile.getAbsolutePath())
                 .setCallback((code, output) -> {
+                    lyVideo.setVisibility(View.VISIBLE);
+                    resultVideoPath = output;
                     txtStatus.setText(ResultBuilder.displayVideoResult(code, path, output));
                     progress.dismiss();
                 }).build();

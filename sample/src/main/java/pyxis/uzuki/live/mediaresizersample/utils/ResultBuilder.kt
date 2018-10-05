@@ -14,7 +14,7 @@ import pyxis.uzuki.live.richutilskt.utils.getImageWidth
  * Description:
  */
 
-val newLine = "\n"
+const val newLine = "\n"
 fun sectionTitle(title: String = "Section") = "==== %s ====\n".format(title)
 
 fun displayImageResult(code: Int, original: String, output: String): String {

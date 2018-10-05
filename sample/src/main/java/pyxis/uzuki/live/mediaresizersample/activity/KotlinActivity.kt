@@ -1,9 +1,12 @@
 package pyxis.uzuki.live.mediaresizersample.activity
 
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.support.v7.app.AppCompatActivity
+import android.view.View
 import kotlinx.android.synthetic.main.activity_demo.*
 import pyxis.uzuki.live.mediaresizer.MediaResizer
 import pyxis.uzuki.live.mediaresizer.data.ImageResizeOption
@@ -12,7 +15,7 @@ import pyxis.uzuki.live.mediaresizer.data.VideoResizeOption
 import pyxis.uzuki.live.mediaresizer.model.ImageMode
 import pyxis.uzuki.live.mediaresizer.model.MediaType
 import pyxis.uzuki.live.mediaresizer.model.ScanRequest
-import pyxis.uzuki.live.mediaresizer.model.VideoResolutionType
+import pyxis.uzuki.live.mediaresizer.model.VideoCompressQuality
 import pyxis.uzuki.live.mediaresizersample.R
 import pyxis.uzuki.live.mediaresizersample.utils.displayImageResult
 import pyxis.uzuki.live.mediaresizersample.utils.displayVideoResult
@@ -21,24 +24,43 @@ import java.io.File
 
 class KotlinActivity : AppCompatActivity() {
 
+    private var originVideoPath: String? = null
+    private var resultVideoPath: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_demo)
 
         btnCamera.setOnClickListener {
-            RPickMedia.instance.pickFromCamera(this, { code, path -> resultProcess(code, path, MediaType.IMAGE) })
+            RPickMedia.instance.pickFromCamera(this) { code, path -> resultProcess(code, path, MediaType.IMAGE) }
         }
 
         btnVideo.setOnClickListener {
-            RPickMedia.instance.pickFromVideoCamera(this, { code, path -> resultProcess(code, path, MediaType.VIDEO) })
+            RPickMedia.instance.pickFromVideoCamera(this) { code, path -> resultProcess(code, path, MediaType.VIDEO) }
         }
 
         btnGallery.setOnClickListener {
-            RPickMedia.instance.pickFromGallery(this, { code, path -> resultProcess(code, path, MediaType.IMAGE) })
+            RPickMedia.instance.pickFromGallery(this) { code, path -> resultProcess(code, path, MediaType.IMAGE) }
         }
 
         btnVideoGallery.setOnClickListener {
-            RPickMedia.instance.pickFromVideo(this, { code, path -> resultProcess(code, path, MediaType.VIDEO) })
+            RPickMedia.instance.pickFromVideo(this) { code, path -> resultProcess(code, path, MediaType.VIDEO) }
+        }
+
+        btnPlayOrigin.setOnClickListener {
+            if (originVideoPath != null) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(originVideoPath))
+                intent.setDataAndType(Uri.parse(originVideoPath), "video/mp4")
+                startActivity(intent)
+            }
+        }
+
+        btnPlayResult.setOnClickListener {
+            if (resultVideoPath != null) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resultVideoPath))
+                intent.setDataAndType(Uri.parse(resultVideoPath), "video/mp4")
+                startActivity(intent)
+            }
         }
     }
 
@@ -74,40 +96,37 @@ class KotlinActivity : AppCompatActivity() {
                 .setImageResizeOption(resizeOption)
                 .setTargetPath(path)
                 .setOutputPath(imageFile.absolutePath)
-                .setCallback({ code, output ->
+                .setCallback { code, output ->
                     txtStatus.text = displayImageResult(code, path, output)
                     progress.dismiss()
-                })
+                }
                 .build()
 
         MediaResizer.process(option)
     }
 
     private fun selectVideoStrategy(path: String) {
-        val lists = arrayListOf("480P", "720P", "960x540 (not supported in devices)")
+        val lists = arrayListOf("Low", "Medium", "High")
         selector(lists, { dialog, item, position ->
-            val type: VideoResolutionType = when (position) {
-                0 -> VideoResolutionType.AS480
-                1 -> VideoResolutionType.AS720
-                2 -> VideoResolutionType.AS960
-                else -> VideoResolutionType.AS720
+            val quality: VideoCompressQuality = when (position) {
+                0 -> VideoCompressQuality.LOW
+                1 -> VideoCompressQuality.MEDIUM
+                else -> VideoCompressQuality.HIGH
             }
-            processVideo(path, type)
+            processVideo(path, quality)
             dialog.dismiss()
         })
     }
 
-    private fun processVideo(path: String, type: VideoResolutionType) {
+    private fun processVideo(path: String, quality: VideoCompressQuality) {
+        originVideoPath = path
         val file = "${Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)}/MediaResizer/".toFile()
         file.mkdirs()
         val imageFile = File(file, "${System.currentTimeMillis().asDateString("yyyy-MM-dd HH:mm:ss")}.mp4")
         val progress = progress("Encoding...")
 
         val resizeOption = VideoResizeOption.Builder()
-                .setVideoResolutionType(type)
-                .setVideoBitrate(1000 * 1000)
-                .setAudioBitrate(128 * 1000)
-                .setAudioChannel(1)
+                .setQuality(path, quality)
                 .setScanRequest(ScanRequest.TRUE)
                 .build()
 
@@ -116,10 +135,12 @@ class KotlinActivity : AppCompatActivity() {
                 .setVideoResizeOption(resizeOption)
                 .setTargetPath(path)
                 .setOutputPath(imageFile.absolutePath)
-                .setCallback({ code, output ->
+                .setCallback { code, output ->
+                    resultVideoPath = output
+                    lyVideo.visibility = View.VISIBLE
                     txtStatus.text = displayVideoResult(code, path, output)
                     progress.dismiss()
-                })
+                }
                 .build()
 
         MediaResizer.process(option)

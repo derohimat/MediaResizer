@@ -2,7 +2,10 @@ package pyxis.uzuki.live.mediaresizer.data
 
 import net.ypresto.androidtranscoder.format.MediaFormatStrategy
 import pyxis.uzuki.live.mediaresizer.model.ScanRequest
+import pyxis.uzuki.live.mediaresizer.model.VideoCompressQuality
 import pyxis.uzuki.live.mediaresizer.model.VideoResolutionType
+import pyxis.uzuki.live.richutilskt.utils.getVideoHeight
+import pyxis.uzuki.live.richutilskt.utils.getVideoWidth
 
 /**
  * MediaResizer
@@ -23,6 +26,48 @@ data class VideoResizeOption(val resolutionType: VideoResolutionType, val videoB
         private var audioChannel: Int = 1
         private var customStrategy: MediaFormatStrategy? = null
         private var request: ScanRequest = ScanRequest.FALSE
+        private val maxVideoSize = 600
+
+        fun setQuality(path: String, quality: VideoCompressQuality) = apply {
+
+            when (quality) {
+                VideoCompressQuality.HIGH -> setHighQuality(path)
+                VideoCompressQuality.MEDIUM -> setMediumQuality(path)
+                else -> setLowQuality(path)
+            }
+        }
+
+        fun setLowQuality(path: String) = apply {
+
+            var tempWidth = path.getVideoWidth() / 2
+            var tempHeight = path.getVideoHeight() / 2
+
+            if (tempWidth > maxVideoSize || tempHeight > maxVideoSize) {
+                tempWidth = path.getVideoWidth() / 3
+                tempHeight = path.getVideoHeight() / 3
+            }
+
+            this.resolutionType = VideoResolutionType.AS480
+            this.videoBitrate = tempWidth * tempHeight * 4
+        }
+
+        fun setMediumQuality(path: String) = apply {
+
+            val tempWidth = path.getVideoWidth() / 2
+            val tempHeight = path.getVideoHeight() / 2
+
+            this.resolutionType = VideoResolutionType.AS480
+            this.videoBitrate = tempWidth * tempHeight * 7
+        }
+
+        fun setHighQuality(path: String) = apply {
+
+            val tempWidth = path.getVideoWidth() * 2 / 3
+            val tempHeight = path.getVideoHeight() * 2 / 3
+
+            this.resolutionType = VideoResolutionType.AS720
+            this.videoBitrate = tempWidth * tempHeight * 10
+        }
 
         /**
          * set resolution to transcode video.
