@@ -4,10 +4,10 @@ apply plugin: 'kotlin-android-extensions'
 apply plugin: 'org.jetbrains.dokka-android'
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
     defaultConfig {
         minSdkVersion 18
-        targetSdkVersion 26
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -26,8 +26,8 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    api "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
-    api 'net.ypresto.androidtranscoder:android-transcoder:0.2.0'
+    api "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    api 'net.ypresto.androidtranscoder:android-transcoder:0.3.0'
     api 'com.github.WindSekirun:RichUtilsKt:2.0.6'
 }
 
